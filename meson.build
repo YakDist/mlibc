@@ -293,7 +293,20 @@ elif host_machine.system() == 'zinnia'
 # ANCHOR: demo-sysdeps
 elif host_machine.system() == 'demo'
 	subdir('sysdeps/demo')
-# ANCHOR_END: demo-sysdeps
+elif host_machine.system() == 'yak'
+	rtld_include_dirs += include_directories(
+		'sysdeps/yak/include', 
+		'sysdeps/yak' / host_machine.cpu_family() / 'include'
+	)
+	libc_include_dirs += include_directories(
+		'sysdeps/yak/include',
+		'sysdeps/yak' / host_machine.cpu_family() / 'include'
+	)
+	subdir('sysdeps/yak')
+elif host_machine.system() == 'nyaux'
+	rtld_include_dirs += include_directories('sysdeps/nyaux/include')
+	libc_include_dirs += include_directories('sysdeps/nyaux/include')
+	subdir('sysdeps/nyaux')
 else
 	error('No sysdeps defined for OS: ' + host_machine.system())
 endif
