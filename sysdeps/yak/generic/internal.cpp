@@ -1,5 +1,4 @@
 #include "mlibc/ansi-sysdeps.hpp"
-#include "mlibc/debug.hpp"
 #include "mlibc/posix-sysdeps.hpp"
 #include <abi-bits/mode_t.h>
 #include <abi-bits/vm-flags.h>
@@ -8,6 +7,7 @@
 #include <bits/ensure.h>
 #include <bits/off_t.h>
 #include <bits/ssize_t.h>
+#include <mlibc/all-sysdeps.hpp>
 #include <stddef.h>
 #include <yak/arch-syscall.h>
 #include <yak/syscall.h>
@@ -178,5 +178,9 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]) {
 int sys_fallocate(int fd, off_t offset, size_t size) {
 	return syscall_err(SYS_FALLOCATE, fd, 0, offset, size);
 }
+
+// In contrast to the isatty() library function, the sysdep function uses return value
+// zero (and not one) to indicate that the file is a terminal.
+int sys_isatty(int fd) { return syscall_err(SYS_ISATTY, fd); }
 
 } // namespace mlibc
