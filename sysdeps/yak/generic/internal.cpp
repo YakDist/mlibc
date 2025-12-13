@@ -170,4 +170,13 @@ int sys_fork(pid_t *child) {
 	return rv.errno;
 }
 
+int sys_execve(const char *path, char *const argv[], char *const envp[]) {
+	return syscall_err(SYS_EXECVE, path, argv, envp);
+}
+
+/* yak implements a linux-style fallocate */
+int sys_fallocate(int fd, off_t offset, size_t size) {
+	return syscall_err(SYS_FALLOCATE, fd, 0, offset, size);
+}
+
 } // namespace mlibc
