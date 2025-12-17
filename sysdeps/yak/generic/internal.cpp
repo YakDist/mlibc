@@ -7,7 +7,9 @@
 #include <bits/ensure.h>
 #include <bits/off_t.h>
 #include <bits/ssize_t.h>
+#include <errno.h>
 #include <mlibc/all-sysdeps.hpp>
+#include <mlibc/debug.hpp>
 #include <stddef.h>
 #include <yak/arch-syscall.h>
 #include <yak/syscall.h>
@@ -35,7 +37,7 @@ int sys_tcb_set(void *pointer) {
 int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window) {
 	auto rv = syscall(SYS_MMAP, hint, size, prot, flags, fd, offset);
 	*window = (void *)rv.retval;
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_vm_unmap(void *pointer, size_t size) { return syscall_err(SYS_MUNMAP, pointer, size); }
@@ -53,13 +55,13 @@ int sys_anon_free(void *pointer, size_t size) { return sys_vm_unmap(pointer, siz
 int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
 	auto rv = syscall(SYS_SEEK, fd, offset, whence);
 	*new_offset = rv.retval;
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
 	auto rv = syscall(SYS_READ, fd, buf, count);
 	*bytes_read = rv.retval;
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_close(int fd) { return syscall_err(SYS_CLOSE, fd); }
@@ -67,7 +69,7 @@ int sys_close(int fd) { return syscall_err(SYS_CLOSE, fd); }
 int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
 	auto rv = syscall(SYS_OPEN, pathname, flags, mode);
 	*fd = rv.retval;
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_futex_wait(int *pointer, int expected, const timespec *time) { STUB; }
@@ -93,7 +95,7 @@ void sys_libc_panic() {
 int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
 	auto rv = syscall(SYS_WRITE, fd, buf, count);
 	*bytes_written = rv.retval;
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_vm_protect(void *pointer, size_t size, int prot) {
@@ -112,13 +114,13 @@ pid_t sys_getppid() { return syscall_rv(SYS_GETPPID); }
 int sys_getpgid(pid_t pid, pid_t *pgid) {
 	auto rv = syscall(SYS_GETPGID, pid);
 	*pgid = rv.retval;
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_getsid(pid_t pid, pid_t *sid) {
 	auto rv = syscall(SYS_GETSID, pid);
 	*sid = rv.retval;
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_setpgid(pid_t pid, pid_t pgid) { return syscall_err(SYS_SETPGID, pid, pgid); }
@@ -126,7 +128,7 @@ int sys_setpgid(pid_t pid, pid_t pgid) { return syscall_err(SYS_SETPGID, pid, pg
 int sys_setsid(pid_t *sid) {
 	auto rv = syscall(SYS_SETSID);
 	*sid = rv.retval;
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_sleep(time_t *secs, long *nanos) {
@@ -140,18 +142,18 @@ int sys_sleep(time_t *secs, long *nanos) {
 	*secs = rem.tv_sec;
 	*nanos = rem.tv_nsec;
 
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_dup(int fd, [[maybe_unused]] int flags, int *newfd) {
 	auto rv = syscall(SYS_DUP2, fd, -1);
 	*newfd = rv.retval;
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_dup2(int fd, [[maybe_unused]] int flags, int newfd) {
 	auto rv = syscall(SYS_DUP2, fd, newfd);
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_fork(pid_t *child) {
@@ -167,7 +169,7 @@ int sys_fork(pid_t *child) {
 	infoLogger() << "return address: " << __builtin_return_address(0) << frg::endlog;
 #endif
 
-	return rv.errno;
+	return rv.err;
 }
 
 int sys_execve(const char *path, char *const argv[], char *const envp[]) {
@@ -182,5 +184,33 @@ int sys_fallocate(int fd, off_t offset, size_t size) {
 // In contrast to the isatty() library function, the sysdep function uses return value
 // zero (and not one) to indicate that the file is a terminal.
 int sys_isatty(int fd) { return syscall_err(SYS_ISATTY, fd); }
+
+int sys_sigaction(
+    int signum, const struct sigaction *__restrict act, struct sigaction *__restrict oldact
+) {
+	infoLogger() << "sys_sigaction is a stub! sys_sigaction(" << signum << ", " << (void *)act
+	             << ", " << oldact << ")" << frg::endlog;
+	return 0;
+}
+
+int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
+
+	infoLogger() << "sys_sigprocmask is a stub! sys_sigprocmask(" << how << ", " << (void *)set
+	             << ", " << retrieve << ")" << frg::endlog;
+	return 0;
+}
+
+int sys_fcntl(int fd, int request, va_list args, int *result) {
+	size_t arg = va_arg(args, size_t);
+	auto rv = syscall(SYS_FCNTL, fd, request, arg);
+	*result = rv.retval;
+	return rv.err;
+}
+
+int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
+	auto rv = syscall(SYS_IOCTL, fd, request, arg);
+	*result = rv.retval;
+	return rv.err;
+}
 
 } // namespace mlibc
