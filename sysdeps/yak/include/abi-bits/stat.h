@@ -1,1 +1,1 @@
-../../../../abis/menix/stat.h
+../../../../abis/yak/stat.h

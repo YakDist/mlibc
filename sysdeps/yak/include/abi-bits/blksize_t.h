@@ -1,1 +1,1 @@
-../../../../abis/linux/blksize_t.h
+../../../../abis/yak/blksize_t.h

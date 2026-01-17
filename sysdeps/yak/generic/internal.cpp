@@ -1,5 +1,8 @@
+#include "bits/winsize.h"
 #include "mlibc/ansi-sysdeps.hpp"
+#include "mlibc/fsfd_target.hpp"
 #include "mlibc/posix-sysdeps.hpp"
+#include <abi-bits/ioctls.h>
 #include <abi-bits/mode_t.h>
 #include <abi-bits/vm-flags.h>
 #include <alloca.h>
@@ -66,15 +69,36 @@ int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
 
 int sys_close(int fd) { return syscall_err(SYS_CLOSE, fd); }
 
-int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
-	auto rv = syscall(SYS_OPEN, pathname, flags, mode);
+int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
+	auto rv = syscall(SYS_OPENAT, dirfd, path, flags, mode);
 	*fd = rv.retval;
 	return rv.err;
 }
 
-int sys_futex_wait(int *pointer, int expected, const timespec *time) { STUB; }
+int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) {
+	if (fsfdt == fsfd_target::path)
+		fd = AT_FDCWD;
+	else if (fsfdt == fsfd_target::fd)
+		flags |= AT_EMPTY_PATH;
+	else
+		__ensure(fsfdt == fsfd_target::fd_path);
 
-int sys_futex_wake(int *pointer) { STUB; }
+	return syscall_err(SYS_FSTATAT, fd, path, statbuf, flags);
+}
+
+int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
+	return sys_openat(AT_FDCWD, pathname, flags, mode, fd);
+}
+
+int sys_futex_wait(int *pointer, int expected, const timespec *time) {
+	sys_libc_log("sys_futex_wait is a stub!");
+	return 0;
+}
+
+int sys_futex_wake(int *pointer) {
+	sys_libc_log("sys_futex_wake is a stub!");
+	return 0;
+}
 
 int sys_clock_get(int clock, time_t *secs, long *nanos) {
 	static int i;
@@ -181,10 +205,6 @@ int sys_fallocate(int fd, off_t offset, size_t size) {
 	return syscall_err(SYS_FALLOCATE, fd, 0, offset, size);
 }
 
-// In contrast to the isatty() library function, the sysdep function uses return value
-// zero (and not one) to indicate that the file is a terminal.
-int sys_isatty(int fd) { return syscall_err(SYS_ISATTY, fd); }
-
 int sys_sigaction(
     int signum, const struct sigaction *__restrict act, struct sigaction *__restrict oldact
 ) {
@@ -209,7 +229,36 @@ int sys_fcntl(int fd, int request, va_list args, int *result) {
 
 int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 	auto rv = syscall(SYS_IOCTL, fd, request, arg);
-	*result = rv.retval;
+	if (result)
+		*result = rv.retval;
+	return rv.err;
+}
+
+int sys_tcgetattr(int fd, struct termios *attr) {
+	return sys_ioctl(fd, TCGETS, (void *)attr, NULL);
+}
+
+int sys_tcsetattr(int fd, int act, const struct termios *attr) {
+	(void)act;
+	return sys_ioctl(fd, TCSETS, (void *)attr, NULL);
+}
+
+// In contrast to the isatty() library function, the sysdep function uses return value
+// zero (and not one) to indicate that the file is a terminal.
+int sys_isatty(int fd) {
+	struct winsize ws;
+	if (0 == sys_ioctl(fd, TIOCGWINSZ, &ws, NULL))
+		return 0;
+	return ENOTTY;
+}
+
+int sys_chdir(const char *path) { return syscall_err(SYS_CHDIR, path); }
+
+int sys_fchdir(int fd) { return syscall_err(SYS_FCHDIR, fd); }
+
+int sys_read_entries(int fd, void *buffer, size_t max_size, size_t *bytes_read) {
+	auto rv = syscall(SYS_GETDENTS, fd, buffer, max_size);
+	*bytes_read = rv.retval;
 	return rv.err;
 }
 

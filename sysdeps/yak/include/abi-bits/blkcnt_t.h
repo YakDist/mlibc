@@ -1,1 +1,1 @@
-../../../../abis/linux/blkcnt_t.h
+../../../../abis/yak/blkcnt_t.h
