@@ -220,6 +220,11 @@ int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restric
 	return 0;
 }
 
+int sys_kill(int pid, int signal) {
+	infoLogger() << "sys_kill is a stub! sys_kill(" << pid << ", " << signal << ")" << frg::endlog;
+	return 0;
+}
+
 int sys_fcntl(int fd, int request, va_list args, int *result) {
 	size_t arg = va_arg(args, size_t);
 	auto rv = syscall(SYS_FCNTL, fd, request, arg);
@@ -270,5 +275,11 @@ int sys_read_entries(int fd, void *buffer, size_t max_size, size_t *bytes_read) 
 	*bytes_read = rv.retval;
 	return rv.err;
 }
+
+int sys_faccessat(int dirfd, const char *pathname, int mode, int flags) {
+	return syscall_err(SYS_FACCESSAT, dirfd, (uint64_t)pathname, mode, flags);
+}
+
+int sys_access(const char *path, int mode) { return sys_faccessat(AT_FDCWD, path, mode, 0); }
 
 } // namespace mlibc
