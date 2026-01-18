@@ -252,6 +252,15 @@ int sys_isatty(int fd) {
 	return ENOTTY;
 }
 
+int sys_tcgetwinsize(int fd, struct winsize *winsz) {
+	return sys_ioctl(fd, TIOCGWINSZ, winsz, NULL);
+}
+
+int sys_tcsetwinsize(int fd, const struct winsize *winsz) {
+	struct winsize ws = *winsz;
+	return sys_ioctl(fd, TIOCSWINSZ, &ws, NULL);
+}
+
 int sys_chdir(const char *path) { return syscall_err(SYS_CHDIR, path); }
 
 int sys_fchdir(int fd) { return syscall_err(SYS_FCHDIR, fd); }
