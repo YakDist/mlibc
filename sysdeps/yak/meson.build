@@ -11,7 +11,8 @@ rtld_sources += files(
 libc_sources += files(
 	'generic/internal.cpp',
 	'generic/generic.cpp',
-	'generic/entry.cpp'
+	'generic/entry.cpp',
+	'generic/mntent.cpp'
 )
 
 if not no_headers
@@ -79,6 +80,10 @@ if not no_headers
 	install_headers(
 		'include/sys/ioccom.h',
 		subdir: 'sys'
+	)
+
+	install_headers(
+		'include/mntent.h',
 	)
 
 	if host_machine.cpu_family() == 'riscv64'

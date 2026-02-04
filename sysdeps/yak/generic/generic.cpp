@@ -1,3 +1,4 @@
+#include "mlibc/ansi-sysdeps.hpp"
 #include "mlibc/posix-sysdeps.hpp"
 #include <abi-bits/ioctls.h>
 #include <abi-bits/pid_t.h>
@@ -291,5 +292,7 @@ int sys_pselect(
 	free(pfds);
 	return 0;
 }
+
+int sys_open_dir(const char *path, int *handle) { return sys_open(path, O_DIRECTORY, 0, handle); }
 
 } // namespace mlibc
