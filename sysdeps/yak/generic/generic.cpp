@@ -2,6 +2,7 @@
 #include "mlibc/posix-sysdeps.hpp"
 #include <abi-bits/ioctls.h>
 #include <abi-bits/pid_t.h>
+#include <cstddef>
 #include <errno.h>
 #include <fcntl.h>
 #include <mlibc/all-sysdeps.hpp>
@@ -97,15 +98,19 @@ int sys_fallocate(int fd, off_t offset, size_t size) {
 int sys_sigaction(
     int signum, const struct sigaction *__restrict act, struct sigaction *__restrict oldact
 ) {
+#if 0
 	infoLogger() << "sys_sigaction is a stub! sys_sigaction(" << signum << ", " << (void *)act
 	             << ", " << oldact << ")" << frg::endlog;
+#endif
 	return 0;
 }
 
 int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
 
+#if 0
 	infoLogger() << "sys_sigprocmask is a stub! sys_sigprocmask(" << how << ", " << (void *)set
 	             << ", " << retrieve << ")" << frg::endlog;
+#endif
 	return 0;
 }
 
@@ -294,5 +299,44 @@ int sys_pselect(
 }
 
 int sys_open_dir(const char *path, int *handle) { return sys_open(path, O_DIRECTORY, 0, handle); }
+
+int sys_readlinkat(int dirfd, const char *path, void *buffer, size_t max_size, ssize_t *length) {
+	auto rv = syscall(SYS_READLINKAT, dirfd, path, buffer, max_size);
+	*length = rv.retval;
+	return rv.err;
+}
+
+int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) {
+	return sys_readlinkat(AT_FDCWD, path, buffer, max_size, length);
+}
+
+int sys_linkat(int olddirfd, const char *old_path, int newdirfd, const char *new_path, int flags) {
+	return syscall_err(SYS_LINKAT, olddirfd, old_path, newdirfd, new_path, flags);
+}
+
+int sys_link(const char *old_path, const char *new_path) {
+	return sys_linkat(AT_FDCWD, old_path, AT_FDCWD, new_path, 0);
+}
+
+int sys_symlinkat(const char *target_path, int dirfd, const char *link_path) {
+	return syscall_err(SYS_SYMLINKAT, dirfd, target_path, link_path);
+}
+
+int sys_symlink(const char *target_path, const char *link_path) {
+	return sys_symlinkat(target_path, AT_FDCWD, link_path);
+}
+
+int sys_pread(int fd, void *buf, size_t n, off_t off, ssize_t *bytes_read) {
+	auto rv = syscall(SYS_PREAD, fd, buf, n, off);
+	*bytes_read = rv.retval;
+	return rv.err;
+}
+
+int sys_pwrite(int fd, const void *buf, size_t n, off_t off, ssize_t *bytes_read) {
+
+	auto rv = syscall(SYS_PWRITE, fd, buf, n, off);
+	*bytes_read = rv.retval;
+	return rv.err;
+}
 
 } // namespace mlibc
