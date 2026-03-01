@@ -97,8 +97,11 @@ int sys_futex_wake(int *pointer) {
 }
 
 int sys_clock_get(int clock, time_t *secs, long *nanos) {
-	static int i;
-	return i++;
+	struct timespec ts;
+	auto rv = syscall(SYS_CLOCK_GET, clock, &ts);
+	*secs = ts.tv_sec;
+	*nanos = ts.tv_nsec;
+	return rv.err;
 }
 
 [[noreturn]] void sys_exit(int status) {
