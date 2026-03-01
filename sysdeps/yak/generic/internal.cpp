@@ -91,7 +91,7 @@ int sys_futex_wait(int *pointer, int expected, const timespec *time) {
 	return 0;
 }
 
-int sys_futex_wake(int *pointer) {
+int sys_futex_wake(int *pointer, bool all) {
 	sys_libc_log("sys_futex_wake is a stub!");
 	return 0;
 }
