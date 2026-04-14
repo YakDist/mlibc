@@ -1,5 +1,3 @@
-#include "mlibc/ansi-sysdeps.hpp"
-#include "mlibc/posix-sysdeps.hpp"
 #include <abi-bits/ioctls.h>
 #include <abi-bits/pid_t.h>
 #include <cstddef>
@@ -7,6 +5,7 @@
 #include <fcntl.h>
 #include <mlibc/all-sysdeps.hpp>
 #include <mlibc/debug.hpp>
+#include <mlibc/sysdeps.hpp>
 #include <stdlib.h>
 #include <sys/poll.h>
 #include <sys/select.h>
@@ -17,35 +16,41 @@
 
 namespace mlibc {
 
-gid_t sys_getgid() { return 0; }
-gid_t sys_getegid() { return 0; }
-uid_t sys_getuid() { return 0; }
-uid_t sys_geteuid() { return 0; }
+gid_t Sysdeps<GetGid>::operator()() { return 0; }
 
-pid_t sys_getpid() { return syscall_rv(SYS_GETPID); }
-pid_t sys_getppid() { return syscall_rv(SYS_GETPPID); }
+gid_t Sysdeps<GetEgid>::operator()() { return 0; }
 
-int sys_getpgid(pid_t pid, pid_t *pgid) {
+uid_t Sysdeps<GetUid>::operator()() { return 0; }
+
+uid_t Sysdeps<GetEuid>::operator()() { return 0; }
+
+pid_t Sysdeps<GetPid>::operator()() { return syscall_rv(SYS_GETPID); }
+
+pid_t Sysdeps<GetPpid>::operator()() { return syscall_rv(SYS_GETPPID); }
+
+int Sysdeps<GetPgid>::operator()(pid_t pid, pid_t *pgid) {
 	auto rv = syscall(SYS_GETPGID, pid);
 	*pgid = rv.retval;
 	return rv.err;
 }
 
-int sys_getsid(pid_t pid, pid_t *sid) {
+int Sysdeps<GetSid>::operator()(pid_t pid, pid_t *sid) {
 	auto rv = syscall(SYS_GETSID, pid);
 	*sid = rv.retval;
 	return rv.err;
 }
 
-int sys_setpgid(pid_t pid, pid_t pgid) { return syscall_err(SYS_SETPGID, pid, pgid); }
+int Sysdeps<SetPgid>::operator()(pid_t pid, pid_t pgid) {
+	return syscall_err(SYS_SETPGID, pid, pgid);
+}
 
-int sys_setsid(pid_t *sid) {
+int Sysdeps<SetSid>::operator()(pid_t *sid) {
 	auto rv = syscall(SYS_SETSID);
 	*sid = rv.retval;
 	return rv.err;
 }
 
-int sys_sleep(time_t *secs, long *nanos) {
+int Sysdeps<Sleep>::operator()(time_t *secs, long *nanos) {
 	struct timespec req = {
 	    .tv_sec = *secs,
 	    .tv_nsec = *nanos,
@@ -59,18 +64,18 @@ int sys_sleep(time_t *secs, long *nanos) {
 	return rv.err;
 }
 
-int sys_dup(int fd, [[maybe_unused]] int flags, int *newfd) {
+int Sysdeps<Dup>::operator()(int fd, [[maybe_unused]] int flags, int *newfd) {
 	auto rv = syscall(SYS_DUP2, fd, -1);
 	*newfd = rv.retval;
 	return rv.err;
 }
 
-int sys_dup2(int fd, [[maybe_unused]] int flags, int newfd) {
+int Sysdeps<Dup2>::operator()(int fd, [[maybe_unused]] int flags, int newfd) {
 	auto rv = syscall(SYS_DUP2, fd, newfd);
 	return rv.err;
 }
 
-int sys_fork(pid_t *child) {
+int Sysdeps<Fork>::operator()(pid_t *child) {
 
 	auto rv = syscall(SYS_FORK);
 	*child = rv.retval;
@@ -86,16 +91,16 @@ int sys_fork(pid_t *child) {
 	return rv.err;
 }
 
-int sys_execve(const char *path, char *const argv[], char *const envp[]) {
+int Sysdeps<Execve>::operator()(const char *path, char *const argv[], char *const envp[]) {
 	return syscall_err(SYS_EXECVE, path, argv, envp);
 }
 
 /* yak implements a linux-style fallocate */
-int sys_fallocate(int fd, off_t offset, size_t size) {
+int Sysdeps<Fallocate>::operator()(int fd, off_t offset, size_t size) {
 	return syscall_err(SYS_FALLOCATE, fd, 0, offset, size);
 }
 
-int sys_sigaction(
+int Sysdeps<Sigaction>::operator()(
     int signum, const struct sigaction *__restrict act, struct sigaction *__restrict oldact
 ) {
 #if 0
@@ -105,7 +110,9 @@ int sys_sigaction(
 	return 0;
 }
 
-int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
+int Sysdeps<Sigprocmask>::operator()(
+    int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve
+) {
 
 #if 0
 	infoLogger() << "sys_sigprocmask is a stub! sys_sigprocmask(" << how << ", " << (void *)set
@@ -114,76 +121,79 @@ int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restric
 	return 0;
 }
 
-int sys_kill(int pid, int signal) {
+int Sysdeps<Kill>::operator()(int pid, int signal) {
 	infoLogger() << "sys_kill is a stub! sys_kill(" << pid << ", " << signal << ")" << frg::endlog;
 	return 0;
 }
 
-int sys_fcntl(int fd, int request, va_list args, int *result) {
+int Sysdeps<Fcntl>::operator()(int fd, int request, va_list args, int *result) {
 	size_t arg = va_arg(args, size_t);
 	auto rv = syscall(SYS_FCNTL, fd, request, arg);
 	*result = rv.retval;
 	return rv.err;
 }
 
-int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
+int Sysdeps<Ioctl>::operator()(int fd, unsigned long request, void *arg, int *result) {
 	auto rv = syscall(SYS_IOCTL, fd, request, arg);
 	if (result)
 		*result = rv.retval;
 	return rv.err;
 }
 
-int sys_tcgetattr(int fd, struct termios *attr) {
-	return sys_ioctl(fd, TCGETS, (void *)attr, nullptr);
+int Sysdeps<Tcgetattr>::operator()(int fd, struct termios *attr) {
+	return sysdep<Ioctl>(fd, TCGETS, (void *)attr, nullptr);
 }
 
-int sys_tcsetattr(int fd, int act, const struct termios *attr) {
+int Sysdeps<Tcsetattr>::operator()(int fd, int act, const struct termios *attr) {
 	(void)act;
-	return sys_ioctl(fd, TCSETS, (void *)attr, nullptr);
+	return sysdep<Ioctl>(fd, TCSETS, (void *)attr, nullptr);
 }
 
 // In contrast to the isatty() library function, the sysdep function uses return value
 // zero (and not one) to indicate that the file is a terminal.
-int sys_isatty(int fd) {
+int Sysdeps<Isatty>::operator()(int fd) {
 	struct winsize ws;
-	if (0 == sys_ioctl(fd, TIOCGWINSZ, &ws, nullptr))
+	if (0 == sysdep<Ioctl>(fd, TIOCGWINSZ, &ws, nullptr))
 		return 0;
 	return ENOTTY;
 }
 
-int sys_tcgetwinsize(int fd, struct winsize *winsz) {
-	return sys_ioctl(fd, TIOCGWINSZ, winsz, nullptr);
+int Sysdeps<Tcgetwinsize>::operator()(int fd, struct winsize *winsz) {
+	return sysdep<Ioctl>(fd, TIOCGWINSZ, winsz, nullptr);
 }
 
-int sys_tcsetwinsize(int fd, const struct winsize *winsz) {
+int Sysdeps<Tcsetwinsize>::operator()(int fd, const struct winsize *winsz) {
 	struct winsize ws = *winsz;
-	return sys_ioctl(fd, TIOCSWINSZ, &ws, nullptr);
+	return sysdep<Ioctl>(fd, TIOCSWINSZ, &ws, nullptr);
 }
 
-int sys_chdir(const char *path) { return syscall_err(SYS_CHDIR, path); }
+int Sysdeps<Chdir>::operator()(const char *path) { return syscall_err(SYS_CHDIR, path); }
 
-int sys_fchdir(int fd) { return syscall_err(SYS_FCHDIR, fd); }
+int Sysdeps<Fchdir>::operator()(int fd) { return syscall_err(SYS_FCHDIR, fd); }
 
-int sys_read_entries(int fd, void *buffer, size_t max_size, size_t *bytes_read) {
+int Sysdeps<ReadEntries>::operator()(int fd, void *buffer, size_t max_size, size_t *bytes_read) {
 	auto rv = syscall(SYS_GETDENTS, fd, buffer, max_size);
 	*bytes_read = rv.retval;
 	return rv.err;
 }
 
-int sys_faccessat(int dirfd, const char *pathname, int mode, int flags) {
+int Sysdeps<Faccessat>::operator()(int dirfd, const char *pathname, int mode, int flags) {
 	return syscall_err(SYS_FACCESSAT, dirfd, (uint64_t)pathname, mode, flags);
 }
 
-int sys_access(const char *path, int mode) { return sys_faccessat(AT_FDCWD, path, mode, 0); }
+int Sysdeps<Access>::operator()(const char *path, int mode) {
+	return sysdep<Faccessat>(AT_FDCWD, path, mode, 0);
+}
 
-int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru, pid_t *ret_pid) {
+int
+Sysdeps<Waitpid>::operator()(pid_t pid, int *status, int flags, struct rusage *ru, pid_t *ret_pid) {
 	(void)ru;
 	auto rv = syscall(SYS_WAITPID, pid, status, flags);
 	*ret_pid = rv.retval;
 	return rv.err;
 }
 
-int sys_ppoll(
+int Sysdeps<Ppoll>::operator()(
     struct pollfd *fds,
     nfds_t count,
     const struct timespec *ts,
@@ -195,7 +205,7 @@ int sys_ppoll(
 	return rv.err;
 }
 
-int sys_poll(struct pollfd *fds, nfds_t count, int timeout_ms, int *num_events) {
+int Sysdeps<Poll>::operator()(struct pollfd *fds, nfds_t count, int timeout_ms, int *num_events) {
 	struct timespec ts;
 	struct timespec *pts = NULL;
 
@@ -205,10 +215,10 @@ int sys_poll(struct pollfd *fds, nfds_t count, int timeout_ms, int *num_events) 
 		pts = &ts;
 	}
 
-	return sys_ppoll(fds, count, pts, NULL, num_events);
+	return sysdep<Ppoll>(fds, count, pts, NULL, num_events);
 }
 
-int sys_pselect(
+int Sysdeps<Pselect>::operator()(
     int num_fds,
     fd_set *read_set,
     fd_set *write_set,
@@ -256,7 +266,7 @@ int sys_pselect(
 	}
 
 	int tmp;
-	int ret = sys_ppoll(pfds, nfds, timeout, sigmask, &tmp);
+	int ret = sysdep<Ppoll>(pfds, nfds, timeout, sigmask, &tmp);
 	if (ret != 0) {
 		free(pfds);
 		return ret;
@@ -298,41 +308,48 @@ int sys_pselect(
 	return 0;
 }
 
-int sys_open_dir(const char *path, int *handle) { return sys_open(path, O_DIRECTORY, 0, handle); }
+int Sysdeps<OpenDir>::operator()(const char *path, int *handle) {
+	return sysdep<Open>(path, O_DIRECTORY, 0, handle);
+}
 
-int sys_readlinkat(int dirfd, const char *path, void *buffer, size_t max_size, ssize_t *length) {
+int Sysdeps<Readlinkat>::operator()(
+    int dirfd, const char *path, void *buffer, size_t max_size, ssize_t *length
+) {
 	auto rv = syscall(SYS_READLINKAT, dirfd, path, buffer, max_size);
 	*length = rv.retval;
 	return rv.err;
 }
 
-int sys_readlink(const char *path, void *buffer, size_t max_size, ssize_t *length) {
-	return sys_readlinkat(AT_FDCWD, path, buffer, max_size, length);
+int
+Sysdeps<Readlink>::operator()(const char *path, void *buffer, size_t max_size, ssize_t *length) {
+	return sysdep<Readlinkat>(AT_FDCWD, path, buffer, max_size, length);
 }
 
-int sys_linkat(int olddirfd, const char *old_path, int newdirfd, const char *new_path, int flags) {
+int Sysdeps<Linkat>::operator()(
+    int olddirfd, const char *old_path, int newdirfd, const char *new_path, int flags
+) {
 	return syscall_err(SYS_LINKAT, olddirfd, old_path, newdirfd, new_path, flags);
 }
 
-int sys_link(const char *old_path, const char *new_path) {
-	return sys_linkat(AT_FDCWD, old_path, AT_FDCWD, new_path, 0);
+int Sysdeps<Link>::operator()(const char *old_path, const char *new_path) {
+	return sysdep<Linkat>(AT_FDCWD, old_path, AT_FDCWD, new_path, 0);
 }
 
-int sys_symlinkat(const char *target_path, int dirfd, const char *link_path) {
+int Sysdeps<Symlinkat>::operator()(const char *target_path, int dirfd, const char *link_path) {
 	return syscall_err(SYS_SYMLINKAT, dirfd, target_path, link_path);
 }
 
-int sys_symlink(const char *target_path, const char *link_path) {
-	return sys_symlinkat(target_path, AT_FDCWD, link_path);
+int Sysdeps<Symlink>::operator()(const char *target_path, const char *link_path) {
+	return sysdep<Symlinkat>(target_path, AT_FDCWD, link_path);
 }
 
-int sys_pread(int fd, void *buf, size_t n, off_t off, ssize_t *bytes_read) {
+int Sysdeps<Pread>::operator()(int fd, void *buf, size_t n, off_t off, ssize_t *bytes_read) {
 	auto rv = syscall(SYS_PREAD, fd, buf, n, off);
 	*bytes_read = rv.retval;
 	return rv.err;
 }
 
-int sys_pwrite(int fd, const void *buf, size_t n, off_t off, ssize_t *bytes_read) {
+int Sysdeps<Pwrite>::operator()(int fd, const void *buf, size_t n, off_t off, ssize_t *bytes_read) {
 
 	auto rv = syscall(SYS_PWRITE, fd, buf, n, off);
 	*bytes_read = rv.retval;

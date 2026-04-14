@@ -1,1 +1,1 @@
-../../../../abis/menix/reboot.h
+../../../../abis/linux/reboot.h
