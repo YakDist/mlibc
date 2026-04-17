@@ -79,6 +79,7 @@ if not no_headers
 
 	install_headers(
 		'include/sys/ioccom.h',
+		'include/sys/sysmacros.h',
 		subdir: 'sys'
 	)
 
